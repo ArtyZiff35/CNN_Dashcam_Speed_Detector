@@ -11,6 +11,7 @@ import tensorflow as tf
 import cv2
 
 
+# This method draws the optical flow onto img with a given step (distance between one arrow origin and the other)
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
     y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)
@@ -23,8 +24,95 @@ def draw_flow(img, flow, step=16):
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
+# This method cuts top and bottom portions of the frame (which are only black areas of the car's dashboard or sky)
+def cutTopAndBottom(img):
+    height, width, channels = img.shape
+    heightBeginning = 20
+    heightEnd = height - 30
+    crop_img = img[heightBeginning : heightEnd, 0 : width]
+    return crop_img
 
-def setupModel(inputShape):
+def setupNvidiaModel(inputShape):
+    model = Sequential()
+
+    # Normalization layer
+    normLayer = keras.layers.BatchNormalization()
+    model.add(normLayer)
+
+    # Convolution Layer 1
+    convLayer = Conv2D(filters=12,
+                       kernel_size=(5, 5),
+                       strides=(1, 1),
+                       activation='relu',
+                       input_shape=inputShape)
+    model.add(convLayer)
+    # Pooling Layer 1
+    poolingLayer = MaxPooling2D(pool_size=(2, 2),
+                                strides=(2, 2))
+    model.add(poolingLayer)
+
+    # Convolution Layer 2
+    convLayer = Conv2D(filters=24,
+                       kernel_size=(5, 5),
+                       activation='relu')
+    model.add(convLayer)
+    # Pooling Layer 2
+    poolingLayer = MaxPooling2D(pool_size=(2, 2),
+                                strides=(2, 2))
+    model.add(poolingLayer)
+
+    # Convolution Layer 3
+    convLayer = Conv2D(filters=36,
+                       kernel_size=(3, 3),
+                       activation='relu')
+    model.add(convLayer)
+    # Pooling Layer 3
+    poolingLayer = MaxPooling2D(pool_size=(2, 2),
+                                strides=(2, 2))
+    model.add(poolingLayer)
+
+    # Convolution Layer 4
+    convLayer = Conv2D(filters=48,
+                       kernel_size=(3, 3),
+                       activation='relu')
+    model.add(convLayer)
+    # Pooling Layer 4
+    poolingLayer = MaxPooling2D(pool_size=(2, 2),
+                                strides=(2, 2))
+    model.add(poolingLayer)
+
+    # Flatten
+    model.add(Flatten())
+
+    # Dense layer 1
+    denseLayer = Dense(1164,
+                       activation='relu')
+    model.add(denseLayer)
+    # Dense layer 2
+    denseLayer = Dense(100,
+                       activation='relu')
+    model.add(denseLayer)
+    # Dense layer 3
+    denseLayer = Dense(50,
+                       activation='relu')
+    model.add(denseLayer)
+    # Dense layer 4
+    denseLayer = Dense(10,
+                       activation='relu')
+    model.add(denseLayer)
+    # Dense layer 5
+    denseLayer = Dense(1)
+    model.add(denseLayer)
+
+    # Compilation
+    model.compile(Adam(lr=0.001),
+                  loss="mse",
+                  metrics=["mse"])
+
+    return model
+
+
+def setupTestModel(inputShape):
     model = Sequential()
     # Adding the first convolutional layer
     convLayer = Conv2D(filters=16,
@@ -79,15 +167,18 @@ for numeric_string in speedTruthArrayString:
 file.close()
 print("Read " + str(len(speedTruthArray)) + " values")
 
-#print(device_lib.list_local_devices())
-#print(K.tensorflow_backend._get_available_gpus())
+# Uncomment to check if GPU is correcetly detected
+# print(device_lib.list_local_devices())
+# print(K.tensorflow_backend._get_available_gpus())
+
+# GPU settings to allow memory growth
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True
 # config.log_device_placement=True
 # sess = tf.Session(config=config)  #With the two options defined above
 
 
-# Opening video
+# Opening training video
 videoFeed = cv2.VideoCapture('./sourceData/train.mp4')
 videoLengthInFrames = int(videoFeed.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -98,10 +189,13 @@ ret1, oldFrame = videoFeed.read()
 oldFrameGrey = cv2.cvtColor(oldFrame, cv2.COLOR_BGR2GRAY)
 
 # Saving the size of the flow
+oldFrameGrey = cutTopAndBottom(oldFrameGrey)
+oldFrameGrey = cv2.equalizeHist(oldFrameGrey)
 dummyFlow = cv2.calcOpticalFlowFarneback(oldFrameGrey , oldFrameGrey, 0.5, 0.5, 5, 20, 3, 5, 1.2, 0)
-flowShape = dummyFlow.shape  # (480, 640, 2)
+flowShape = dummyFlow.shape  # Original non cropped size is (480, 640, 2)
+
 # Setting up the CNN model
-model = setupModel(flowShape)
+model = setupNvidiaModel(flowShape)
 
 # Iterating through all couples of frames of the video
 frameCounter = 0
@@ -114,6 +208,12 @@ while(videoFeed.isOpened()):
 
     # Convert to greyscale
     newFrameGrey = cv2.cvtColor(newFrame, cv2.COLOR_BGR2GRAY)
+
+    # Cut top and bottom portions of the image
+    newFrameGrey = cutTopAndBottom(newFrameGrey)
+
+    # Apply Histogram Equalization to increase contrast
+    newFrameGrey = cv2.equalizeHist(newFrameGrey)
 
     # Calculate flow for this couple
     flow = cv2.calcOpticalFlowFarneback(oldFrameGrey , newFrameGrey, 0.5, 0.5, 5, 20, 3, 5, 1.2, 0)
@@ -135,7 +235,7 @@ while(videoFeed.isOpened()):
         # Preparing data
         X = np.array(batchFrames)
         Y = np.array(batchSpeeds)
-        #with tf.device('/cpu:0'):
+        #with tf.device('/cpu:0'):   #Uncomment to use CPU instead of GPU
         model.fit(x=X,
                   y=Y,
                   verbose=1,
