@@ -13,6 +13,17 @@ def cutTopAndBottom(img):
     return crop_img
 
 
+# Reading all the speed ground truths
+print("Reading speed ground truths")
+file = open("./sourceData/test.txt")
+speedTruthArrayString = file.readlines()
+speedTruthArray = []
+for numeric_string in speedTruthArrayString:
+    numeric_string = numeric_string.strip('\n')
+    speedTruthArray.append(float(numeric_string))
+file.close()
+print("Read " + str(len(speedTruthArray)) + " values")
+
 # Loading the Keras trained model
 model = load_model('speed_model.h5')
 
@@ -58,8 +69,11 @@ while(coupleCounter < videoLengthInFrames-20):
     speedPrediction = model.predict(X)
     speedText = str(round(speedPrediction[0,0], 2))
 
-    # Drawing speed text on image
+    # Drawing predicted speed text on image
     cv2.putText(newFrame, speedText, (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, color=(51, 153, 255),lineType=cv2.LINE_AA)
+    # Drawing actual correct speed on image
+    cv2.putText(newFrame, str(round(speedTruthArray[coupleCounter],2)), (640-150, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, color=(51, 255, 51),lineType=cv2.LINE_AA)
+
 
     # Incrementing couples counter and swapping frames
     coupleCounter = coupleCounter + 1
