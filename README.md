@@ -9,8 +9,8 @@ The dataset is composed by:
 
 The training video features Highway driving in the first part, and Town driving in the second (with intersections, stop signals, ...). Also, illumination conditions change a lot during the video, going through tunnels and under bridges. 
 ![Sample video screenshots](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/roadsOverview.png)
+
 Speed values are changing a lot too, being high and homogeneous during Highway sections, and slower and intermittent during city sections. ![Ground truth speeds chart](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/groundTruthSpeedChart.PNG) 
 
 All of this makes the training video very heterogeneous in its features.
-
 The test video also shows both city and highway driving.
