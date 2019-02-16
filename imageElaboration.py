@@ -20,10 +20,10 @@ def elaborateImage(newFrame):
     # Cutting a region of interest
     height, width = newFrameEdges.shape
     # Creating white polygonal shape on black image
-    bottomLeft = [10, height - 130]
-    topLeft = [width / 3 + 60, height / 2]
-    topRight = [width * 2 / 3 - 60, height / 2]
-    bottomRight = [width - 10, height - 130]
+    bottomLeft = [0, height - 130]
+    topLeft = [10, height / 2 - 15]
+    topRight = [width -30, height / 2 - 15]
+    bottomRight = [width, height - 130]
     pts = np.array([bottomLeft, topLeft, topRight, bottomRight], np.int32)
     pts = pts.reshape((-1, 1, 2))
     blackImage = np.zeros((height, width, 1), np.uint8)
@@ -37,11 +37,13 @@ def elaborateImage(newFrame):
     newFrameHough = drawHoughTransformLines(blackImage, lines)
 
     # Drawing road from original frame
-    newFrameGrey = cv2.cvtColor(newFrameAdjusted, cv2.COLOR_BGR2GRAY)
+    newFrameGrey = cv2.cvtColor(newFrame, cv2.COLOR_BGR2GRAY)
     coloredMaskedRoad = cv2.bitwise_and(newFrameGrey, newFrameGrey, mask=polygonalShape)
+    #coloredMaskedRoad = cv2.equalizeHist(coloredMaskedRoad)
     newFrameMaskAndRoad = cv2.add(coloredMaskedRoad, newFrameROI)   # Adding canny edge overlay to highlight the lane markers
+    newFrameMaskAndRoadBlurred = cv2.GaussianBlur(newFrameMaskAndRoad, (5, 5), 0)
 
     # Cutting image basing on mask size
-    result = cutTopAndBottom(coloredMaskedRoad, int(height / 2), int(height - 130))
+    result = cutTopAndBottom(coloredMaskedRoad, int(height / 2 - 15), int(height - 130))
 
     return result

@@ -13,24 +13,19 @@ from imageElaboration import *
 
 
 # TODO ignore lateral movements
-# TODO consider only cone of the road
-# TODO Evaluation
-# TODO Calculate average in test to soften changes in speed
+# TODO do better evaluation
+# TODO try other image preprocessing
 
-
-# Setting up a Keras model of: Norm + 4 Conv and Pool + Flat + 5 Dense
+# Setting up a Keras model of: 4 Conv and Pool + Flat + 5 Dense
 def setupNvidiaModel(inputShape):
-    model = Sequential()
 
-    # Normalization layer
-    normLayer = keras.layers.BatchNormalization()
-    model.add(normLayer)
+    model = Sequential()
 
     # Convolution Layer 1
     convLayer = Conv2D(filters=12,
                        kernel_size=(5, 5),
                        strides=(1, 1),
-                       activation='relu',
+                       activation='elu',
                        input_shape=inputShape)
     model.add(convLayer)
     # Pooling Layer 1
@@ -41,7 +36,7 @@ def setupNvidiaModel(inputShape):
     # Convolution Layer 2
     convLayer = Conv2D(filters=24,
                        kernel_size=(5, 5),
-                       activation='relu')
+                       activation='elu')
     model.add(convLayer)
     # Pooling Layer 2
     poolingLayer = MaxPooling2D(pool_size=(2, 2),
@@ -51,7 +46,7 @@ def setupNvidiaModel(inputShape):
     # Convolution Layer 3
     convLayer = Conv2D(filters=36,
                        kernel_size=(3, 3),
-                       activation='relu')
+                       activation='elu')
     model.add(convLayer)
     # Pooling Layer 3
     poolingLayer = MaxPooling2D(pool_size=(2, 2),
@@ -61,7 +56,7 @@ def setupNvidiaModel(inputShape):
     # Convolution Layer 4
     convLayer = Conv2D(filters=48,
                        kernel_size=(3, 3),
-                       activation='relu')
+                       activation='elu')
     model.add(convLayer)
     # Pooling Layer 4
     poolingLayer = MaxPooling2D(pool_size=(2, 2),
@@ -73,19 +68,19 @@ def setupNvidiaModel(inputShape):
 
     # Dense layer 1
     denseLayer = Dense(1164,
-                       activation='relu')
+                       activation='elu')
     model.add(denseLayer)
     # Dense layer 2
     denseLayer = Dense(100,
-                       activation='relu')
+                       activation='elu')
     model.add(denseLayer)
     # Dense layer 3
     denseLayer = Dense(50,
-                       activation='relu')
+                       activation='elu')
     model.add(denseLayer)
     # Dense layer 4
     denseLayer = Dense(10,
-                       activation='relu')
+                       activation='elu')
     model.add(denseLayer)
     # Dense layer 5
     denseLayer = Dense(1)
@@ -139,7 +134,7 @@ def setupTestModel(inputShape):
 
 
 ############ IMPORTANT VARIABLES ###########
-batchSize = 200
+batchSize = 500
 ############################################
 
 
@@ -175,6 +170,15 @@ frameCoupleArray = []
 frameCounter = 0
 batchFrames = []
 batchSpeeds = []
+evalFrames = []
+evalSpeeds = []
+flow_mat = None
+image_scale = 0.5
+nb_images = 1
+win_size = 15
+nb_iterations = 2
+deg_expansion = 5
+STD = 1.3
 while(coupleCounter < videoLengthInFrames-20):
 
     # Read a couple of new frames from the video feed
@@ -187,19 +191,38 @@ while(coupleCounter < videoLengthInFrames-20):
     if coupleCounter == 0:
         # If this is the first frame...
         oldFrameROI = newFrameROI
-        flow = cv2.calcOpticalFlowFarneback(oldFrameROI, newFrameROI, 0.5, 0.5, 5, 20, 3, 5, 1.2, 0)
+        oldFrame = newFrame
+        flow = cv2.calcOpticalFlowFarneback(oldFrameROI, newFrameROI,
+                                            flow_mat,
+                                            image_scale,
+                                            nb_images,
+                                            win_size,
+                                            nb_iterations,
+                                            deg_expansion,
+                                            STD,
+                                            0)
+        #flow = opticalFlowDense(oldFrame, newFrame)
         # Also, set up the CNN model
         flowShape = flow.shape
         model = setupNvidiaModel(flowShape)
     else:
-        flow = cv2.calcOpticalFlowFarneback(oldFrameROI, newFrameROI, 0.5, 0.5, 5, 20, 3, 5, 1.2, 0)
-
+        flow = cv2.calcOpticalFlowFarneback(oldFrameROI, newFrameROI,
+                                            flow_mat,
+                                            image_scale,
+                                            nb_images,
+                                            win_size,
+                                            nb_iterations,
+                                            deg_expansion,
+                                            STD,
+                                            0)
+        #flow = opticalFlowDense(oldFrame, newFrame)
     # Saving the couple of data and label
     batchFrames.append(flow)
     batchSpeeds.append(speedTruthArray[coupleCounter])
 
     # Incrementing couples counter and swapping frames
     oldFrameROI = newFrameROI
+    oldFrame = newFrame
     coupleCounter = coupleCounter + 1
     #cv2.imshow('frame', draw_flow(cv2.cvtColor(newFrame, cv2.COLOR_BGR2GRAY), flow))
     #cv2.imshow('frame', newFrameROI)
@@ -208,28 +231,62 @@ while(coupleCounter < videoLengthInFrames-20):
 
     print(str(coupleCounter))
 
+
+# Shuffling data before training
+print("\n\n\n###############################\nSHUFFLING MODEL\n")
+unified = list(zip(batchFrames, batchSpeeds))
+np.random.shuffle(unified)
+batchFrames, batchSpeeds = zip(*unified)
+
+
+# Training model
+print("\n\n\n###############################\nTRAINING MODEL\n")
+index = 0
+trainBatchFrame = []
+trainBatchSpeed = []
+frameCounter = 0
+while(index < len(batchSpeeds)):
+    # Forming batch
+    trainBatchFrame.append(batchFrames[index])
+    trainBatchSpeed.append(batchSpeeds[index])
     # Training batch
+    index = index + 1
     frameCounter = frameCounter + 1
     if frameCounter == batchSize or (coupleCounter+1) == videoLengthInFrames:
+        print("\nWe are at " + str(index) + "\n")
+        # Choosing some frames to use for evaluation
+        evalFrames.append(trainBatchFrame.pop(int(batchSize/2)))
+        evalSpeeds.append(trainBatchSpeed.pop(int(batchSize/2)))
+        evalFrames.append(trainBatchFrame.pop(int(batchSize/4)))
+        evalSpeeds.append(trainBatchSpeed.pop(int(batchSize/4)))
         # Preparing data
-        X = np.array(batchFrames)
-        Y = np.array(batchSpeeds)
+        X = np.array(trainBatchFrame)
+        Y = np.array(trainBatchSpeed)
         #with tf.device('/cpu:0'):   #Uncomment to use CPU instead of GPU
         model.fit(x=X,
                   y=Y,
                   verbose=1,
-                  epochs=50,
-                  batch_size=50
+                  epochs=15,
+                  batch_size=32,
+                  shuffle=True
                   )
         # Resetting counter and x and y arrays
         frameCounter = 0
-        batchFrames = []
-        batchSpeeds = []
+        trainBatchFrame = []
+        trainBatchSpeed = []
 
 
 # Saving the trained model
 model.save('speed_model.h5')  # creates a HDF5 file 'speed_model.h5'
-#model = load_model('speed_model.h5')
+
+
+# Evaluation of the model
+print("\n\n\n#########################################\nEVALUATION OF THE MODEL\n")
+X = np.array(evalFrames)
+Y = np.array(evalSpeeds)
+scores = model.evaluate(X, Y, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+print(str(scores))
 
 videoFeed.release()
 cv2.destroyAllWindows()
