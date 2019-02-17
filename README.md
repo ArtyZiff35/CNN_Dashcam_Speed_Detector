@@ -84,3 +84,7 @@ The following is a running example of the model:
 ## Future Works
 The system might be improved by adding semantic segmentation in order to eliminate other cars from the frame before the Optical Flow calculation.
 Also, the predicted values might be smoothened by calculating a moving average window of some frames (the current model predicts the speed in real time taking into account only the speed of the previous frame). 
+
+# References
+Original Comma.ai challenge, where training and test video can be found:
+https://github.com/commaai/speedchallenge
