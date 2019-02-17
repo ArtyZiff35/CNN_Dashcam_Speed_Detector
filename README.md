@@ -74,4 +74,13 @@ Considering that it was not possible to hold in memory all the frames simultaneo
 ### Evaluation and Results
 After having validated the system on the 15% of the total frames, an MSE value of 0.6025 was achieved.
 
+The following is a running example of the model:
+- Number in RED is the speed predicted by THIS model
+- Number in GREEN is the speed predicted by another model found in the internet (with MSE of 1.1939)
 
+![Running example](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/running_Example.gif) 
+
+
+## Future Works
+The system might be improved by adding semantic segmentation in order to eliminate other cars from the frame before the Optical Flow calculation.
+Also, the predicted values might be smoothened by calculating a moving average window of some frames (the current model predicts the speed in real time taking into account only the speed of the previous frame). 
