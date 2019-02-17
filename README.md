@@ -52,6 +52,7 @@ The effectiveness of this algorithm depends mainly on 3 factors:
 - Neighborhood window size
 - Pyramiding parameters (kernel size and levels)
 - Number of iterations of the algorithm
+
 Thanks to the pre-processing phase, the majority of other cars, buildings, sky and other uniform elements should have disappeared: those would've worsened the performance of the algorithm.
 
 ![Optical Flow](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/flow.PNG) 
