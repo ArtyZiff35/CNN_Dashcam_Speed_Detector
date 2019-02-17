@@ -15,3 +15,8 @@ Speed values are changing a lot too, being high and homogeneous during Highway s
 
 All of this makes the training video very heterogeneous in its features.
 The test video also shows both city and highway driving.
+
+## Approach
+The adopted approach consists of feeding Optical Flows calculated from pairs of frames to a Convolutional Neural Network.
+
+### Image preprocessing
