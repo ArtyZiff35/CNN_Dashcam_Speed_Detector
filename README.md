@@ -19,7 +19,7 @@ The test video also shows both city and highway driving.
 ## Approach
 The adopted approach consists of feeding Optical Flows calculated from pairs of frames to a Convolutional Neural Network.
 
-### Image preprocessing
+### Image pre-processing
 The aim is to modify the image in a way such that the optical flow can be calculated with a great precision. Considering that the original frames are very dark, the first thing to do is to increase illumination and contrast:
 
 ![Illumination and Contrast adjustment](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/AdjustedIlluminationContrast.PNG) 
@@ -46,4 +46,14 @@ Finally, we add the outlined version of the image to our previous result in orde
 ![Combined](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/Combined.PNG) 
 
 
+### Optical Flow
+The two main approaches for Optical Flow calculation are the Lucas Kanade method for sparse flow, and the Farneback method for dense flow. In this project the Farneback method was chosen, which calculates for each pixel the delta values for both X and Y directions between two consecutive frames using a quadratic polynomial approximation of a pixel's neighborhood.
+The effectiveness of this algorithm depends mainly on 3 factors:
+- Neighborhood window size
+- Pyramiding parameters (kernel size and levels)
+- Number of iterations of the algorithm
+Thanks to the pre-processing phase, the majority of other cars, buildings, sky and other uniform elements should have disappeared: those would've worsened the performance of the algorithm.
 
+![Optical Flow](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/flow.PNG) 
+
+### CNN model training
