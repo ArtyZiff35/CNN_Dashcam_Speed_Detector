@@ -19,7 +19,7 @@ The test video also shows both city and highway driving.
 ## Approach
 The adopted approach consists of feeding Optical Flows calculated from pairs of frames to a Convolutional Neural Network.
 
-### Image pre-processing
+### Image Pre-processing
 The aim is to modify the image in a way such that the optical flow can be calculated with a great precision. Considering that the original frames are very dark, the first thing to do is to increase illumination and contrast:
 
 ![Illumination and Contrast adjustment](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/AdjustedIlluminationContrast.PNG) 
@@ -57,4 +57,6 @@ Thanks to the pre-processing phase, the majority of other cars, buildings, sky a
 
 ![Optical Flow](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/flow.PNG) 
 
-### CNN model training
+### CNN Model Training
+The Convolutional Neural Network was trained using only 85% of the data, while the remaining 15% was used for Validation. This is beacuse the dataset provided is extremely small, and using a greater amount of frames for the Validation set would translate in a worse performance of the model overall.
+
