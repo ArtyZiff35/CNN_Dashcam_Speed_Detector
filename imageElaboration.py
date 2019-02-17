@@ -2,11 +2,10 @@ import numpy as np
 import cv2
 from utilities import *
 
-
-# This function applies all elaboration steps to the image
-def elaborateImage(newFrame):
+# This function is able to highlight the contours of road lane markings using color thresholding and canny edge
+def highlightRoadLaneMarkings(newFrame):
     # Adjusting brightness and contrast
-    newFrameAdjusted = apply_brightness_contrast(newFrame, 90, 90)
+    newFrameAdjusted = apply_brightness_contrast(newFrame, 100, 100)
 
     # Threshold so that only yellow and white are kept. Result is greyscale
     newFrameThreshold = thresholdWhiteAndYellow(newFrameAdjusted)
@@ -21,8 +20,8 @@ def elaborateImage(newFrame):
     height, width = newFrameEdges.shape
     # Creating white polygonal shape on black image
     bottomLeft = [0, height - 130]
-    topLeft = [10, height / 2 - 15]
-    topRight = [width -30, height / 2 - 15]
+    topLeft = [width / 3 + 40, height / 2]
+    topRight = [width / 3 * 2 - 40, height / 2]
     bottomRight = [width, height - 130]
     pts = np.array([bottomLeft, topLeft, topRight, bottomRight], np.int32)
     pts = pts.reshape((-1, 1, 2))
@@ -31,17 +30,29 @@ def elaborateImage(newFrame):
     # Doing AND operation with newFrameEdges
     newFrameROI = cv2.bitwise_and(newFrameEdges, newFrameEdges, mask=polygonalShape)
 
-    # Hough transform to detect straight lines. Returns an array of r and theta values
-    lines = cv2.HoughLinesP(newFrameROI, 1, np.pi / 180, 15)
-    blackImage = np.zeros((height, width, 1), np.uint8)
-    newFrameHough = drawHoughTransformLines(blackImage, lines)
+    return newFrameROI
+
+# This function applies all elaboration steps to the image
+def elaborateImage(newFrame):
+
 
     # Drawing road from original frame
-    newFrameGrey = cv2.cvtColor(newFrame, cv2.COLOR_BGR2GRAY)
+    newFrameAdjusted = apply_brightness_contrast(newFrame, 30, 15)
+    newFrameGrey = cv2.cvtColor(newFrameAdjusted, cv2.COLOR_BGR2GRAY)
+    height, width = newFrameGrey.shape
+    bottomLeft = [0, height - 130]
+    topLeft = [0, height / 2 + 10]
+    topCenter = [width/2, height / 2 - 15]
+    topRight = [width, height / 2 + 10]
+    bottomRight = [width, height - 130]
+    pts = np.array([bottomLeft, topLeft, topCenter, topRight, bottomRight], np.int32)
+    pts = pts.reshape((-1, 1, 2))
+    blackImage = np.zeros((height, width, 1), np.uint8)
+    polygonalShape = cv2.fillPoly(blackImage, [pts], (255, 255, 255))
     coloredMaskedRoad = cv2.bitwise_and(newFrameGrey, newFrameGrey, mask=polygonalShape)
     #coloredMaskedRoad = cv2.equalizeHist(coloredMaskedRoad)
+    newFrameROI = highlightRoadLaneMarkings(newFrame)
     newFrameMaskAndRoad = cv2.add(coloredMaskedRoad, newFrameROI)   # Adding canny edge overlay to highlight the lane markers
-    newFrameMaskAndRoadBlurred = cv2.GaussianBlur(newFrameMaskAndRoad, (5, 5), 0)
 
     # Cutting image basing on mask size
     result = cutTopAndBottom(coloredMaskedRoad, int(height / 2 - 15), int(height - 130))

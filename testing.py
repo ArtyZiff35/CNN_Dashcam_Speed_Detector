@@ -8,7 +8,7 @@ from imageElaboration import *
 
 # Reading all the speed ground truths
 print("Reading speed ground truths")
-file = open("./sourceData/train.txt")
+file = open("./sourceData/test.txt")
 speedTruthArrayString = file.readlines()
 speedTruthArray = []
 for numeric_string in speedTruthArrayString:
@@ -18,13 +18,13 @@ file.close()
 print("Read " + str(len(speedTruthArray)) + " values")
 
 # Loading the Keras trained model
-model = load_model('./savedModels/greyMaskSimple_15epochs_32batch_500section.h5')
+model = load_model('./savedModels/greyMask.h5')
 model.compile(Adam(lr=0.001),
                   loss="mse",
                   metrics=["mse"])
 
 # Opening testing video
-videoFeed = cv2.VideoCapture('./sourceData/train.mp4')
+videoFeed = cv2.VideoCapture('./sourceData/test.mp4')
 videoLengthInFrames = int(videoFeed.get(cv2.CAP_PROP_FRAME_COUNT))
 print(videoLengthInFrames)
 

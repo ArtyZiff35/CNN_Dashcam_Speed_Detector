@@ -12,10 +12,6 @@ import cv2
 from imageElaboration import *
 
 
-# TODO ignore lateral movements
-# TODO do better evaluation
-# TODO try other image preprocessing
-
 # Setting up a Keras model of: 4 Conv and Pool + Flat + 5 Dense
 def setupNvidiaModel(inputShape):
 
@@ -164,6 +160,10 @@ print("Read " + str(len(speedTruthArray)) + " values")
 videoFeed = cv2.VideoCapture('./sourceData/train.mp4')
 videoLengthInFrames = int(videoFeed.get(cv2.CAP_PROP_FRAME_COUNT))
 
+# Preparing for validation data retrieval
+validationSize = int(videoLengthInFrames * 0.15)
+validationGap = int(videoLengthInFrames/validationSize)
+
 # Iterating through all couples of frames of the video
 coupleCounter = 0
 frameCoupleArray = []
@@ -179,7 +179,7 @@ win_size = 15
 nb_iterations = 2
 deg_expansion = 5
 STD = 1.3
-while(coupleCounter < videoLengthInFrames-20):
+while(coupleCounter < videoLengthInFrames-1):
 
     # Read a couple of new frames from the video feed
     ret2, newFrame = videoFeed.read()
@@ -216,16 +216,22 @@ while(coupleCounter < videoLengthInFrames-20):
                                             STD,
                                             0)
         #flow = opticalFlowDense(oldFrame, newFrame)
-    # Saving the couple of data and label
-    batchFrames.append(flow)
-    batchSpeeds.append(speedTruthArray[coupleCounter])
+
+    # Check if this frame is for training or validation
+    if frameCounter == validationGap:
+        frameCounter = 0
+        evalFrames.append(flow)
+        evalSpeeds.append(speedTruthArray[coupleCounter])
+    else:
+        # Saving the couple of data and label for training
+        batchFrames.append(flow)
+        batchSpeeds.append(speedTruthArray[coupleCounter])
 
     # Incrementing couples counter and swapping frames
     oldFrameROI = newFrameROI
     oldFrame = newFrame
     coupleCounter = coupleCounter + 1
-    #cv2.imshow('frame', draw_flow(cv2.cvtColor(newFrame, cv2.COLOR_BGR2GRAY), flow))
-    #cv2.imshow('frame', newFrameROI)
+    frameCounter = frameCounter + 1
     cv2.imshow('frame',draw_flow(newFrameROI,flow))
     cv2.waitKey(1)
 
@@ -233,10 +239,15 @@ while(coupleCounter < videoLengthInFrames-20):
 
 
 # Shuffling data before training
+# For training
 print("\n\n\n###############################\nSHUFFLING MODEL\n")
 unified = list(zip(batchFrames, batchSpeeds))
 np.random.shuffle(unified)
 batchFrames, batchSpeeds = zip(*unified)
+# For validation
+unified = list(zip(evalFrames, evalSpeeds))
+np.random.shuffle(unified)
+evalFrames, evalSpeeds = zip(*unified)
 
 
 # Training model
@@ -252,13 +263,8 @@ while(index < len(batchSpeeds)):
     # Training batch
     index = index + 1
     frameCounter = frameCounter + 1
-    if frameCounter == batchSize or (coupleCounter+1) == videoLengthInFrames:
+    if frameCounter == batchSize or index==(len(batchSpeeds)-1) :
         print("\nWe are at " + str(index) + "\n")
-        # Choosing some frames to use for evaluation
-        evalFrames.append(trainBatchFrame.pop(int(batchSize/2)))
-        evalSpeeds.append(trainBatchSpeed.pop(int(batchSize/2)))
-        evalFrames.append(trainBatchFrame.pop(int(batchSize/4)))
-        evalSpeeds.append(trainBatchSpeed.pop(int(batchSize/4)))
         # Preparing data
         X = np.array(trainBatchFrame)
         Y = np.array(trainBatchSpeed)
