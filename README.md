@@ -86,5 +86,5 @@ The system might be improved by adding semantic segmentation in order to elimina
 Also, the predicted values might be smoothened by calculating a moving average window of some frames (the current model predicts the speed in real time taking into account only the speed of the previous frame). 
 
 # References
-Original Comma.ai challenge, where training and test video can be found:
+Original Comma.ai challenge, where training and test videos can be found:
 https://github.com/commaai/speedchallenge
