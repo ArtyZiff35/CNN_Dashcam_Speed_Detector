@@ -60,3 +60,18 @@ Thanks to the pre-processing phase, the majority of other cars, buildings, sky a
 ### CNN Model Training
 The Convolutional Neural Network was trained using only 85% of the data, while the remaining 15% was used for Validation. This is beacuse the dataset provided is extremely small, and using a greater amount of frames for the Validation set would translate in a worse performance of the model overall.
 
+The NVIDIA CNN structure was adopted:
+
+![CNN Structure](https://github.com/ArtyZiff35/CNN_Dashcam_Speed_Detector/blob/master/images/CNN%20structure.png) 
+
+First of all, the list of all computed flow values (between couples of frames) is shuffled in order to avoid the system to bias towards a specific ordering of the frames inside the video.
+Considering that it was not possible to hold in memory all the frames simultaneously, the model was trained 500 frames at a time, using:
+- Batch size: 32
+- Number of Epochs: 15
+- Loss function: MSE
+- Learning rate: 0.001
+
+### Evaluation and Results
+After having validated the system on the 15% of the total frames, an MSE value of 0.6025 was achieved.
+
+
